@@ -1,0 +1,156 @@
+#include <SoftwareSerial.h>
+#include <AFMotor.h>
+AF_DCMotor motor_L(4);
+AF_DCMotor motor_R(3);
+
+String Speed;
+char  LorR;
+int  i, s;
+
+char ack='X';
+char ACK;
+
+byte DataToRead[6];
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  motor_R.run(RELEASE);
+  motor_L.run(RELEASE);
+
+  
+}
+
+
+void loop() {
+  DataToRead[5] = '\n';
+  Serial.readBytesUntil(char(13), DataToRead, 5);
+  char c = DataToRead[0];
+
+  /* For Debuggig, send string to RPi */
+  /*
+  for (i = 0; i < 6; i++) {
+    Serial.write(DataToRead[i]);
+    if (DataToRead[i] == '\n') break;
+  }
+  */
+  int i = 0;
+  if(c=='X')
+       move();
+  //DataToRead[]
+  /*
+  else{
+
+  motor_R.setSpeed(0);
+  motor_L.setSpeed(0);
+  motor_L.run(FORWARD);
+  motor_R.run(FORWARD);
+  }
+  */
+}
+
+void move(){
+  LorR = DataToRead[1];
+  int baseSpeedL =220;
+  // 155 200
+  int baseSpeedR =220;
+  //int turnSpeed =150;
+
+    Speed = "";
+  for (i = 2; (DataToRead[i] != '\n') && (i < 6); i++) {
+    Speed += DataToRead[i];
+  }
+  s = Speed.toInt();
+  
+  
+  s=int(s/2000);
+
+
+  if(LorR == 'L'){
+    if(s<=1){
+    motor_L.setSpeed(baseSpeedL);
+    motor_R.setSpeed(baseSpeedR);
+    motor_L.run(FORWARD);
+    motor_R.run(FORWARD);
+        delay(220); 
+      }
+    else if(s<=2){
+    motor_L.setSpeed(baseSpeedL);
+    motor_R.setSpeed(int(baseSpeedR/2));
+    motor_L.run(FORWARD);
+    motor_R.run(FORWARD);
+    //motor_L.run(RELEASE);
+    //motor_R.run(RELEASE);  
+        delay(220); 
+      }
+    else{
+    motor_L.setSpeed(baseSpeedL);
+    motor_R.setSpeed(0);
+    motor_L.run(FORWARD);
+    motor_R.run(FORWARD);
+    //motor_L.run(RELEASE);
+    // motor_R.run(RELEASE); 
+        delay(220); 
+    }
+   }
+  
+  else if(LorR=='R'){
+    if(s<=1){
+    motor_R.setSpeed(baseSpeedR);
+    motor_L.setSpeed(baseSpeedL);
+    motor_R.run(FORWARD);
+    motor_L.run(FORWARD);
+        delay(220); 
+      }
+    else if(s<=2){
+    motor_R.setSpeed(baseSpeedR);
+    motor_L.setSpeed(int(baseSpeedL/2));
+    motor_R.run(FORWARD);
+    motor_L.run(FORWARD);
+    //motor_R.run(RELEASE);
+    //motor_L.run(RELEASE);  
+        delay(220); 
+      }
+    else {
+    motor_R.setSpeed(baseSpeedR);
+    motor_L.setSpeed(0);
+    motor_L.run(FORWARD);
+    motor_R.run(FORWARD);
+    //motor_R.run(RELEASE);
+    //motor_L.run(RELEASE);
+        delay(220); 
+    }
+  }
+  else if(LorR=='B'){
+          motor_L.setSpeed(baseSpeedL);
+          motor_R.setSpeed(baseSpeedR);
+          motor_L.run(BACKWARD);
+          motor_R.run(BACKWARD);
+              delay(220); 
+    }
+   else if(LorR=='r'){
+          motor_L.setSpeed(baseSpeedL);
+          motor_R.setSpeed(baseSpeedR);
+          motor_L.run(BACKWARD);
+          motor_R.run(FORWARD);
+          delay(150); 
+    }
+   else if(LorR=='l'){
+          motor_L.setSpeed(baseSpeedL);
+          motor_R.setSpeed(baseSpeedR);
+          motor_L.run(FORWARD);
+          motor_R.run(BACKWARD);
+          delay(150); 
+     }
+
+  //motor_R.run(BRAKE);
+  //motor_L.run(BRAKE);
+
+  motor_R.setSpeed(0);
+  motor_L.setSpeed(0);
+  motor_L.run(FORWARD);
+  motor_R.run(FORWARD);
+
+    //멈췄다가기
+  //delay(10);
+  }
