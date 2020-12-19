@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+        <title></title>
+        <style>
+        html, body {
+            margin: 0;
+            height: 100%;
+        }
+        #webgl {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        </style>
+    
+<!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Editor msdt:dt="string">&#44608;&#48124;&#54840;</mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Editor>
+<mso:Order msdt:dt="string">13979800.0000000</mso:Order>
+<mso:ComplianceAssetId msdt:dt="string"></mso:ComplianceAssetId>
+<mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Author msdt:dt="string">&#44608;&#48124;&#54840;</mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Author>
+<mso:ContentTypeId msdt:dt="string">0x0101006A408FCCDDBADC4CB8CA4936160FEED4</mso:ContentTypeId>
+<mso:_SourceUrl msdt:dt="string"></mso:_SourceUrl>
+<mso:_SharedFileIndex msdt:dt="string"></mso:_SharedFileIndex>
+</mso:CustomDocumentProperties>
+</xml><![endif]-->
+</head>
+    <body>
+        <canvas id="webgl"></canvas>
+    </body>
+<script type="module">
+// 경로를 절대 건드리지 말 것
+import * as THREE from '../resources/threejs/r119/build/three.module.js';
+import {OrbitControls} from '../resources/threejs/r119/examples/jsm/controls/OrbitControls.js';
+import {GUI} from '../3rdparty/dat.gui.module.js';
+
+function main() {
+    // 캔버스, 렌더러, 신, 백그라운드 만듬
+    const canvas = document.querySelector('#webgl');
+    const renderer = new THREE.WebGLRenderer({canvas});
+    renderer.shadowMap.enabled = true;  // 그림자
+   
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('black');
+    //scene.background = new THREE.Color('white');
+
+    // room
+    const room = {width:30, height:20};
+    {
+        const cubeGeo = new THREE.BoxBufferGeometry(room.width, room.height, room.width);
+        const cubeMat = new THREE.MeshPhongMaterial({color: '#8AC', side:THREE.BackSide});
+        // 큐브 매태리얼의 사이드를 백사이드로 함, 박스(방 내부 면만 봐야 함)
+        // cubeMat.side = THREE.BackSide;
+        const mesh = new THREE.Mesh(cubeGeo, cubeMat);
+        mesh.receiveShadow = true;  // 그림자
+        mesh.position.set(0, room.height / 2, 0);
+        scene.add(mesh);
+    }
+
+    // object 추가, from Three.js Primitives
+    let rotObject = [];
+    {
+        const cubeSize = 3;
+        const cubeGeo = new THREE.BoxBufferGeometry(cubeSize, cubeSize, cubeSize);
+        const cubeMat = new THREE.MeshPhongMaterial({color: 'yellow'});
+        const mesh = new THREE.Mesh(cubeGeo, cubeMat);
+        mesh.castShadow = true;     // 그림자
+        mesh.receiveShadow = true;  // 그림자
+        mesh.position.set(cubeSize + 4, cubeSize / 2 + 2, -3);
+        scene.add(mesh);
+        rotObject.push(mesh);
+    }
+    {
+        const sphereRadius = 2;
+        const sphereWidthDivisions = 32;
+        const sphereHeightDivisions = 16;
+        const sphereGeo = new THREE.SphereBufferGeometry(sphereRadius, sphereWidthDivisions, sphereHeightDivisions);
+        const sphereMat = new THREE.MeshPhongMaterial({color: '#CA8'});
+        const mesh = new THREE.Mesh(sphereGeo, sphereMat);
+        mesh.castShadow = true;     // 그림자
+        mesh.receiveShadow = true;  // 그림자
+        mesh.position.set(-sphereRadius - 4, sphereRadius + 10, 5);
+        scene.add(mesh);
+        
+    }
+    {
+        const knotGeo = new THREE.TorusKnotBufferGeometry(2, 0.4, 64, 8);
+        const knotMat = new THREE.MeshPhongMaterial({color : 'red'});
+        const mesh = new THREE.Mesh(knotGeo, knotMat);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.position.set(-10, 3, -10);
+        scene.add(mesh);
+        rotObject.push(mesh);
+    }
+    {
+        const outline = new THREE.Shape([
+        [ -2, -0.1], [  2, -0.1], [ 2,  0.6],
+        [1.6,  0.6], [1.6,  0.1], [-2,  0.1],
+        ].map(p => new THREE.Vector2(...p)));
+
+        const x = -2.5;
+        const y = -5;
+        const shape = new THREE.CurvePath();
+        const points = [
+            [x + 2.5, y + 2.5],
+            [x + 2.5, y + 2.5], [x + 2,   y      ], [x,       y      ],
+            [x - 3,   y      ], [x - 3,   y + 3.5], [x - 3,   y + 3.5],
+            [x - 3,   y + 5.5], [x - 1.5, y + 7.7], [x + 2.5, y + 9.5],
+            [x + 6,   y + 7.7], [x + 8,   y + 4.5], [x + 8,   y + 3.5],
+            [x + 8,   y + 3.5], [x + 8,   y      ], [x + 5,   y      ],
+            [x + 3.5, y      ], [x + 2.5, y + 2.5], [x + 2.5, y + 2.5],
+        ].map(p => new THREE.Vector3(...p, 0));
+        for (let i = 0; i < points.length; i += 3) {
+            shape.add(new THREE.CubicBezierCurve3(...points.slice(i, i + 4)));
+        }
+        const extrudeSettings = {
+            steps:100, bevelEnabled:false, extrudePath:shape,
+        };
+        const geometry = new THREE.ExtrudeBufferGeometry(outline, extrudeSettings);
+        const material = new THREE.MeshPhongMaterial({color:'purple'});
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.scale.set(0.5, 0.5, 0.5);
+        mesh.position.set(8,9,8);
+        scene.add(mesh);
+        rotObject.push(mesh);
+    }
+    
+    // define the luxo lamp
+
+    // base, 아무것도 설정되있지 않은채로 add만 되어있다
+    const base = new THREE.Object3D();
+    {
+        scene.add(base);
+    }
+    // baseMesh , base밑에 basemesh를 넣었다
+    // 네모난 빨간 박스이다
+    const baseMesh = {width:4, height:1, color:'red'};
+    {
+        baseMesh.mesh = new THREE.Mesh(
+            new THREE.BoxBufferGeometry(1, 1, 1),   // 가로, 높이, 세로
+            new THREE.MeshPhongMaterial({color: baseMesh.color})
+        );
+        baseMesh.mesh.castShadow = true;     // 그림자
+        baseMesh.mesh.receiveShadow = true;  // 그림자
+        base.add(baseMesh.mesh);
+    }
+    
+    // baseDisc
+    // 네모난 빨간 박스위에서 돌아가는 노란 디스크이다
+    const baseDisc = new THREE.Object3D();
+    {
+        baseDisc.angle = 45;    // 초기 회전 값
+        base.add(baseDisc);
+    }
+    // baseDiscMesh
+    const baseDiscMesh = {radius: 1, height: 0.2, color:'orange', segs:8};  // 8각기둥처럼 보임
+    {
+        baseDiscMesh.mesh = new THREE.Mesh( 
+            new THREE.CylinderBufferGeometry(
+                baseDiscMesh.radius, // 원기둥
+                baseDiscMesh.radius,
+                baseDiscMesh.height,
+                baseDiscMesh.segs
+            ),
+            new THREE.MeshPhongMaterial({color: baseDiscMesh.color})
+        );
+        baseDisc.add(baseDiscMesh.mesh);
+    }
+
+    // to do something
+
+    // 막대기 만들기 함수
+    function makeCylinderMesh(longMesh){
+        // height부분은 1로 세팅하고, scale로 수정
+        let ret = new THREE.Mesh(
+            new THREE.CylinderBufferGeometry(
+                longMesh.radius,
+                longMesh.radius,
+                1,
+                longMesh.segs
+            ),
+            new THREE.MeshPhongMaterial({color : longMesh.color})
+        )
+        ret.scale.set(1, longMesh.height, 1);
+        ret.castShadow = true;
+        ret.receiveShadow = true;
+        return ret;
+    }
+    // 관절 만들기 함수
+    function makeJoint(jointMesh){
+        let ret = new THREE.Mesh(
+            new THREE.IcosahedronBufferGeometry(
+                jointMesh.radius,
+                jointMesh.detail
+            ),
+            new THREE.MeshPhongMaterial({color: jointMesh.color})
+        );
+        ret.castShadow = true;
+        ret.receiveShadow = true;
+        return ret;
+    }
+
+
+    // 가장 아래 관절
+    const jointlow = new THREE.Object3D();
+    {
+        jointlow.angle = 30;
+        jointlow.position.y = baseDiscMesh.height;    // 구현 중 세팅
+        baseDisc.add(jointlow);
+    }
+    const jointlowMesh = {radius:0.3, detail: 1, color:'green'};
+    jointlowMesh.mesh = makeJoint(jointlowMesh);
+    jointlow.add(jointlowMesh.mesh);
+
+
+    // 아래 막대기
+    const long1 = new THREE.Object3D();
+    {
+        jointlow.add(long1);
+    }
+    const long1Mesh = {radius: 0.2, height:5, old_height:5, color:'black', segs:8};
+    long1Mesh.mesh = makeCylinderMesh(long1Mesh);
+    long1.add(long1Mesh.mesh);
+
+
+    // 중간 관절
+    const jointmid = new THREE.Object3D();
+    {
+        jointmid.angle = -70;
+        jointmid.position.y = long1Mesh.height/2;
+        // add라는 것을 해야, 부모의 속성을 물려받는듯
+        long1.add(jointmid);
+    }
+    const jointmidMesh = {radius:0.3, detail: 1, color:'green'};
+    jointmidMesh.mesh = makeJoint(jointmidMesh);
+    jointmid.add(jointmidMesh.mesh);
+
+
+    // 위 막대기
+    const long2 = new THREE.Object3D();
+    {
+        jointmid.add(long2);
+    }
+    const long2Mesh = {radius: 0.2, height:3, old_height:3, color:'yellow', segs:8};
+    long2Mesh.mesh = makeCylinderMesh(long2Mesh);
+    long2.add(long2Mesh.mesh);
+
+
+    // 가장 위 관절
+    const jointtop = new THREE.Object3D();
+    {
+        jointtop.angle = -80;
+        jointtop.position.y = long2Mesh.height/2;
+        long2.add(jointtop);
+    }
+    const jointtopMesh = {radius:0.3, detail: 1, color:'green'};
+    jointtopMesh.mesh = makeJoint(jointtopMesh);
+    jointtop.add(jointtopMesh.mesh);
+
+
+    // 파란 전등(꼬깔콘)
+    const head = new THREE.Object3D();
+    {
+        head.position.y = jointtopMesh.radius*2;
+        jointtop.add(head);
+    }
+    const headMesh = {radiusT: 1, radiusB:0.5, height:1, color:'blue', segs:30};
+    {
+        headMesh.mesh = new THREE.Mesh(
+            new THREE.CylinderBufferGeometry(   // 원기둥
+                headMesh.radiusT,
+                headMesh.radiusB,
+                headMesh.height,
+                headMesh.segs
+                ),
+            new THREE.MeshPhongMaterial({color : headMesh.color})
+        )
+        headMesh.mesh.castShadow = true;
+        headMesh.mesh.receiveShadow = true;
+        head.add(headMesh.mesh);
+    }
+
+    // 꼬깔콘에 있는 주황색 전구
+    const see = new THREE.Object3D();
+    {
+        see.position.y = headMesh.height/3;
+        head.add(see);
+    }
+    const seeMesh = {radius:0.3, detail:2};
+    {
+        seeMesh.mesh = new THREE.Mesh(
+            new THREE.IcosahedronBufferGeometry(seeMesh.radius, seeMesh.detail),
+            new THREE.MeshPhongMaterial({color : 'orange'})
+        )
+        see.add(seeMesh.mesh);
+    }
+    // spot light 추가
+    const lightinfo = {color:0xFFFFFF, intensity:1, angle:30};
+    const mylight = new THREE.SpotLight(lightinfo.color, lightinfo.intensity);
+    {
+        mylight.castShadow = true;  // 그림자
+        mylight.target.position.set(0,1,0); // 초기에는 위를 바라보게 하자
+
+        see.add(mylight);
+        mylight.add(mylight.target);    // 타겟은 light 아래에 둔다
+        
+        const helper = new THREE.SpotLightHelper(mylight);
+        scene.add(helper);
+    }
+
+
+    // 우리가 추가한 전등값도 수정하도록 변경해야함
+    function updateLuxo() {
+        // 땅바닥으로 베이스 안내려가게 하는 듯
+        base.position.y = baseMesh.height/2;
+        // 위치가 바뀌었을때 빨간박스가 쪼그라들지 않게 한다
+        baseMesh.mesh.scale.set(baseMesh.width, baseMesh.height, baseMesh.width);
+
+        baseDisc.position.y = baseMesh.height/2;
+        // 라디안으로 바꿔서 돌린다
+        baseDisc.rotation.y = THREE.MathUtils.degToRad(baseDisc.angle);
+        baseDiscMesh.mesh.position.y = baseDiscMesh.height/2;
+        
+        // version1, Mesh를 지우고 새롭게 만들기
+        // // long1의 height가 바뀌었다면
+        // if(long1Mesh.mesh !== null && long1Mesh.height !== long1Mesh.old_height){
+        //     long1.remove(long1Mesh.mesh);
+        //     long1Mesh.mesh.geometry.dispose();
+        //     long1Mesh.mesh.material.dispose();
+        //     console.log(`delete1`);
+        //     long1Mesh.mesh = makeCylinderMesh(long1Mesh);
+        //     long1.add(long1Mesh.mesh);
+        //     long1Mesh.old_height = long1Mesh.height;
+        // }
+        // // long2의 height가 바뀌었다면
+        // if(long2Mesh.mesh !== null && long2Mesh.height !== long2Mesh.old_height){
+        //     long2.remove(long2Mesh.mesh);
+        //     long2Mesh.mesh.geometry.dispose();
+        //     long2Mesh.mesh.material.dispose();
+        //     console.log(`delete2`);
+        //     long2Mesh.mesh = makeCylinderMesh(long2Mesh);
+        //     long2.add(long2Mesh.mesh);
+        //     long2Mesh.old_height = long2Mesh.height;
+        // }
+        
+        // version2 Mesh를 지우지 않고 갱신하기
+        long1Mesh.mesh.scale.set(1, long1Mesh.height, 1);
+        long2Mesh.mesh.scale.set(1, long2Mesh.height, 1);
+    
+        // 각 요소 위치 갱신
+        long1.position.y = (long1Mesh.height/2);
+        jointmid.position.y = (long1Mesh.height/2);
+        long2.position.y = (long2Mesh.height/2);
+        jointtop.position.y = (long2Mesh.height/2);
+        head.position.y = (jointtopMesh.radius*2);
+
+
+        // 관절 회전
+        jointlow.rotation.x = THREE.MathUtils.degToRad(jointlow.angle);
+        jointmid.rotation.x = THREE.MathUtils.degToRad(jointmid.angle);
+        jointtop.rotation.x = THREE.MathUtils.degToRad(jointtop.angle);
+
+        // 빛 앵글 수정
+        mylight.angle = THREE.MathUtils.degToRad(lightinfo.angle);
+    }
+
+    updateLuxo();
+
+    // ui를 만드는 부분, ui도 만들어야함
+    {
+        const gui = new GUI();
+        let folder;
+        folder = gui.addFolder('base (red box)');
+        // name('x')는 gui에 보일 텍스트를 설정
+        folder.add(base.position, 'x', -room.width/2, room.width/2, 1).name('x').onChange(updateLuxo);
+        folder.add(base.position, 'z', -room.width/2, room.width/2, 1).name('z').onChange(updateLuxo);
+        folder.add(baseMesh, 'height', 0.1, 2, 0.1).name('height').onChange(updateLuxo);
+        folder.add(baseDisc, 'angle', 0, 360, 1).name('disk').onChange(updateLuxo);
+        folder.open();
+
+        let folder1;
+        folder1 = gui.addFolder('arm length');
+        folder1.add(long1Mesh, 'height', 2, 7, 0.1).name('black arm len(lower)').onChange(updateLuxo);
+        folder1.add(long2Mesh, 'height', 2, 7, 0.1).name('yellow arm len(upper)').onChange(updateLuxo);
+        folder1.open();
+
+        let folder2;
+        folder2 = gui.addFolder('joint angles');
+        folder2.add(jointlow, 'angle', -180, 180, 1).name('low').onChange(updateLuxo);
+        folder2.add(jointmid, 'angle', -180, 180, 1).name('mid').onChange(updateLuxo);
+        folder2.add(jointtop, 'angle', -180, 180, 1).name('top').onChange(updateLuxo);
+        folder2.open();
+
+        let folder3;
+        folder3 = gui.addFolder(`light`);
+        folder3.add(lightinfo, 'angle', 10, 90, 1).name('angle').onChange(updateLuxo);
+        folder3.open();
+    }
+
+    {   // point light
+        const color = 0xFFFFFF;
+        const intensity = 0.5;
+        const light = new THREE.PointLight(color, intensity);
+        light.castShadow = true;    // 그림자
+        light.position.set(0, room.height, 0);
+        scene.add(light);
+        
+        const helper = new THREE.PointLightHelper(light);
+        scene.add(helper);
+    }
+    {   // an ambient light
+        const light = new THREE.AmbientLight('white', 0.3);
+        scene.add(light);
+    }
+
+
+    // 카메라 세팅
+    const fov = 45;
+    const aspect = 2;  // the canvas default
+    const near = 0.1;
+    const far = 100;
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.set(0, room.height*0.5, room.width*1.4);
+    
+    // 오빗 컨트롤러 만들기
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, room.height*0.5, 0);
+    controls.update();
+ 
+    // 그리기 부분
+    function resizeRendererToDisplaySize(renderer) {
+        const canvas = renderer.domElement;
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        const needResize = canvas.width !== width || canvas.height !== height;
+        if (needResize) {
+          renderer.setSize(width, height, false);
+        }
+        return needResize;
+    }
+    
+    function render(time) {
+        time *= 0.001;
+        if (resizeRendererToDisplaySize(renderer)) {
+          const canvas = renderer.domElement;
+          camera.aspect = canvas.clientWidth / canvas.clientHeight;
+          camera.updateProjectionMatrix();
+        }
+
+        rotObject.forEach((obj, ndx) =>{
+                const speed = .5 + ndx * .05;
+                const rot = time * speed;
+                obj.rotation.x = rot;
+                obj.rotation.y = rot;
+            }
+        );
+        
+        renderer.render(scene, camera);
+        
+        requestAnimationFrame(render);
+    }
+    
+    requestAnimationFrame(render);
+}
+
+main();
+</script>
+</html>
+

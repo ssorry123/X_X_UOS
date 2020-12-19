@@ -1,0 +1,109 @@
+<!--https://threejsfundamentals.org/threejs/threejs-scenegraph-sun.html-->
+
+<!-- Licensed under a BSD license. See license.html for license -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Three.js - Scenegraph - Sun</title>
+    <style>
+    body {
+        margin: 0;
+    }
+    #c {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+    }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+  </body>
+<script type="module">
+import * as THREE from './resources/threejs/r119/build/three.module.js';
+
+function main() {
+  const canvas = document.querySelector('#c');
+  const renderer = new THREE.WebGLRenderer({canvas});
+
+  // 카메라 세팅
+  const fov = 40;
+  const aspect = 2;  // the canvas default
+  const near = 0.1;
+  const far = 1000;
+  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  camera.position.set(0, 50, 0);    // 카메라의 위치를 설정 한다 (x,y,z), y가 높이
+  camera.up.set(0, 0, 1);   // 
+  camera.lookAt(0, 0, 0);   // 카메라가 0,0,0을 바라보게 한다
+
+  // scene 만들기
+  const scene = new THREE.Scene();
+  // light 추가
+  {
+    const color = 0xFFFFFF;
+    const intensity = 3;
+    const light = new THREE.PointLight(color, intensity);
+    scene.add(light);
+  }
+
+  // an array of objects who's rotation to update
+  const objects = [];
+
+  // 스피어 만들기, 태양 노란색 육각형
+  // 지오메트리
+  const radius = 1;
+  const widthSegments = 6;
+  const heightSegments = 6;
+  const sphereGeometry = new THREE.SphereBufferGeometry(
+      radius, widthSegments, heightSegments);
+
+  // 메트리얼
+  const sunMaterial = new THREE.MeshPhongMaterial({emissive: 0xFFFF00});
+  const sunMesh = new THREE.Mesh(sphereGeometry, sunMaterial);
+  sunMesh.scale.set(5, 5, 5);
+  scene.add(sunMesh);   // scene에 추가
+  objects.push(sunMesh);// 그릴 객체 추가, 관리하기 위해서
+  
+
+  // 캔버스 사이즈가 조절될때마다 화면이 알맞게 조절되도록 하는 함수
+  function resizeRendererToDisplaySize(renderer) {
+    const canvas = renderer.domElement;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const needResize = canvas.width !== width || canvas.height !== height;
+    if (needResize) {
+      renderer.setSize(width, height, false);
+    }
+    return needResize;
+  }
+
+  // 그림을 그리는 부분
+  function render(time) {   // ms
+    time *= 0.001;
+
+    if (resizeRendererToDisplaySize(renderer)) {
+      const canvas = renderer.domElement;
+      camera.aspect = canvas.clientWidth / canvas.clientHeight;
+      camera.updateProjectionMatrix();
+    }
+
+    // 리스트에 있는 obj의 y값을 수정
+    objects.forEach((obj) => {
+      obj.rotation.y = time;
+    });
+
+    renderer.render(scene, camera);
+
+    requestAnimationFrame(render);
+  }
+
+  requestAnimationFrame(render);
+}
+
+main();
+</script>
+</html>
+
+

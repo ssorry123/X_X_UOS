@@ -1,0 +1,75 @@
+<!--
+code from : https://threejsfundamentals.org/threejs/threejs-fundamentals-with-light.html ,,
+to learn Three.js ,,
+
+음영이 있는 큐브 만들기
+-->
+
+<!-- Licensed under a BSD license. See license.html for license -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Three.js - Fundamentals with light</title>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+  </body>
+<script type="module">
+import * as THREE from './resources/threejs/r119/build/three.module.js';
+
+function main() {
+  const canvas = document.querySelector('#c');
+  const renderer = new THREE.WebGLRenderer({canvas});
+
+  const fov = 75;
+  const aspect = 2;  // the canvas default
+  const near = 0.1;
+  const far = 5;
+  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  camera.position.z = 2;
+
+  const scene = new THREE.Scene();
+
+  // light 설정
+  // 앞으로 다시 사용되지 않는 변수를 위해 블록에 씌움
+  {
+    const color = 0xFFFFFF; // 흰색
+    const intensity = 1;    // 빛의 세기
+    // DirectionalLight -> 태양광 같은 빛
+    const light = new THREE.DirectionalLight(color, intensity);
+    light.position.set(-1, 2, 4);   // 해당 위치에서 발광점
+    scene.add(light);
+  }
+
+  const boxWidth = 1;
+  const boxHeight = 1;
+  const boxDepth = 1;
+  const geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
+
+  // light를 핸들링할 수 있는, PhongMaterial
+  // light에 의해서, 음영이 생긴다
+  const material = new THREE.MeshPhongMaterial({color: 0x44aa88});  // greenish blue
+
+  const cube = new THREE.Mesh(geometry, material);
+  scene.add(cube);
+
+  function render(time) {
+    time *= 0.001;  // convert time to seconds
+
+    cube.rotation.x = time;
+    cube.rotation.y = time;
+
+    renderer.render(scene, camera);
+
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+
+}
+
+main();
+</script>
+</html>
+

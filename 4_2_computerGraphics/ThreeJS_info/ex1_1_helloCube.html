@@ -1,0 +1,67 @@
+<!--
+code from : https://threejsfundamentals.org/threejs/threejs-fundamentals.html ,,
+to learn Three.js ,,
+
+움직이지 않는, 간단한 큐브 생성
+-->
+<!-- Licensed under a BSD license. See license.html for license -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Three.js - Fundamentals</title>
+  </head>
+  <body>
+    <canvas id="c"></canvas>    <!-- 그림을 그릴 곳-->
+  </body>
+
+<script type="module">
+// 정적인 그림
+// THREE.js import
+// r119 -> 특정 버전 반드시 명시해야 함
+import * as THREE from './resources/threejs/r119/build/three.module.js';
+
+// 함수 한개
+function main() {
+  const canvas = document.querySelector('#c');  // 캔버스 액세스, c라는 id를 가진
+  const renderer = new THREE.WebGLRenderer({canvas});   // 그림을 그리는 엔진, renderer, object 생성
+  // no error checking
+
+  // make camera, setting camera(lens)
+  const fov = 75;    // field of view, 화각
+  const aspect = 2;  // 가로 세로 비율, the canvas default
+  // fustum -> 사각뿔
+  const near = 0.1;  // near of frustum, 카메라 시야의 최소 거리, 이것 보다 가까운 것은 못봄
+  const far = 5;     // far of frustum , 카메라 시야의 최대 거리, 이것 보다 먼 것은 못봄
+  // 원근감이 느껴지는 perspective 카메라
+  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  // zx => 지면, y => 높이, world 좌표계, 카메라 기본 위치 (0,0,0);
+  // 카메라 기본 바라보는 방향 -> -z 방향:
+  camera.position.z = 2;    // 카메라 위치 이동, 원점에 생기는 대상을 볼 수 있게 된다
+
+  // compose Scene, (root!)
+  const scene = new THREE.Scene();
+
+  // geometry 설정, 박스 만들기, 위치 => 원점
+  const boxWidth = 1;
+  const boxHeight = 1;
+  const boxDepth = 1;
+  const geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
+
+  // material 설정, (색깔 설정)
+  const material = new THREE.MeshBasicMaterial({color: 0x44aa88});  // greenish blue
+
+  // 생김새와, 색깔로 Mesh cube 만들고, scene 노드 바로 밑(자식에) 추가
+  const cube = new THREE.Mesh(geometry, material);
+  scene.add(cube);
+
+  // 어떤 scene과 camera로 그릴 것인가?, 그린다
+  renderer.render(scene, camera);
+}
+
+// 만든 함수 호출
+main();
+</script>
+</html>
+

@@ -1,0 +1,70 @@
+<!--
+code from : https://threejsfundamentals.org/threejs/threejs-fundamentals-with-animation.html ,,
+to learn Three.js ,,
+
+움직이는 큐브 생성
+-->
+
+<!-- Licensed under a BSD license. See license.html for license -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Three.js - Fundamentals with animation</title>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+  </body>
+<script type="module">
+import * as THREE from './resources/threejs/r119/build/three.module.js';
+
+function main() {
+  const canvas = document.querySelector('#c');
+  const renderer = new THREE.WebGLRenderer({canvas});
+
+  const fov = 75;
+  const aspect = 2;  // the canvas default
+  const near = 0.1;
+  const far = 5;
+  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  camera.position.z = 2;
+
+  const scene = new THREE.Scene();
+
+  const boxWidth = 1;
+  const boxHeight = 1;
+  const boxDepth = 1;
+  const geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
+
+  const material = new THREE.MeshBasicMaterial({color: 0x44aa88});  // greenish blue
+
+  const cube = new THREE.Mesh(geometry, material);
+  scene.add(cube);
+
+  // ex01과 다른 부분
+  // 큐브의 방향을 바꾸고, 다시 그린다
+  function render(time) {
+    time *= 0.001;  // convert time to seconds
+
+    // 각 축을 기준으로, 큐브를 회전
+    cube.rotation.x = time;
+    cube.rotation.y = time;
+
+    // render 호출
+    renderer.render(scene, camera);
+
+    // requestAnimationFrame = 화면에 보일때만, 화면을 다시 그릴 필요가 있을때만 계속 호출됨
+    // 그리고(after drawing) 또 등록
+    requestAnimationFrame(render);
+  }
+  
+  // render 등록
+  requestAnimationFrame(render);
+
+}
+
+main();
+</script>
+</html>
+

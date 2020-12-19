@@ -1,0 +1,200 @@
+<!-- Licensed under a BSD license. See license.html for license -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>WebGL2 - Triangle with position for color</title>
+<link type="text/css" href="resources/webgl-tutorials.css" rel="stylesheet" />
+</head>
+<body>
+<div class="description">
+Drag sliders to translate, rotate, and scale.
+</div>
+<canvas id="canvas"></canvas>
+<div id="uiContainer">
+  <div id="ui">
+    <div id="x"></div>
+    <div id="y"></div>
+    <div id="angle"></div>
+    <div id="scaleX"></div>
+    <div id="scaleY"></div>
+  </div>
+</div>
+</body>
+<!--
+for most samples webgl-utils only provides shader compiling/linking and
+canvas resizing because why clutter the examples with code that's the same in every sample.
+See https://webgl2fundamentals.org/webgl/lessons/webgl-boilerplate.html
+and https://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+for webgl-utils, m3, m4, and webgl-lessons-ui.
+-->
+<script src="resources/webgl-utils.js"></script>
+<script src="resources/webgl-lessons-ui.js"></script>
+<script src="resources/m3.js"></script>
+<script>
+"use strict";
+
+// 버텍스 쉐이더, 
+var vs = `#version 300 es
+// 좌표는 vec2
+in vec2 a_position;
+
+uniform mat3 u_matrix;
+
+// out으로 varing variable 설정
+out vec4 v_color;
+
+void main() {
+  // Multiply the position by the matrix.
+  // vec3를 만든다, xy좌표만 가져온다
+  // gl_Position은 vec4이므로 4개가 필요함
+  gl_Position = vec4((u_matrix * vec3(a_position, 1)).xy, 0, 1);
+
+  // Convert from clipspace to colorspace.
+  // Clipspace goes -1.0 to +1.0
+  // Colorspace goes from 0.0 to 1.0
+  // 버텍스마다 색깔을 다르게 설정할 수 있다는 것을 보여준다
+  // -1은 0이되고, 1은 1이된다, 위치에 따라 색까링 달라진다
+  // x좌표 r, y좌표 g, z좌표 b, b는 무조건 0.5 색깔
+  // 프래그먼트마다 색깔이 다 다르다
+  v_color = gl_Position * 0.5 + 0.5;
+}
+`;
+
+var fs = `#version 300 es
+
+precision highp float;
+
+in vec4 v_color;
+
+out vec4 outColor;
+
+void main() {
+  outColor = v_color;
+}
+`;
+
+function main() {
+  // Get A WebGL context
+  /** @type {HTMLCanvasElement} */
+  var canvas = document.querySelector("#canvas");
+  var gl = canvas.getContext("webgl2");
+  if (!gl) {
+    return;
+  }
+
+  // setup GLSL program
+  var program = webglUtils.createProgramFromSources(gl, [vs, fs]);
+
+  // look up where the vertex data needs to go.
+  var positionLocation = gl.getAttribLocation(program, "a_position");
+
+  // lookup uniforms
+  var matrixLocation = gl.getUniformLocation(program, "u_matrix");
+
+  // Create set of attributes
+  var vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+
+  // Create a buffer.
+  var buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+
+  // Set Geometry.
+  setGeometry(gl);
+
+  // tell the position attribute how to pull data out of the current ARRAY_BUFFER
+  gl.enableVertexAttribArray(positionLocation);
+  var size = 2;
+  var type = gl.FLOAT;
+  var normalize = false;
+  var stride = 0;
+  var offset = 0;
+  gl.vertexAttribPointer(positionLocation, size, type, normalize, stride, offset);
+
+  var translation = [200, 150];
+  var angleInRadians = 0;
+  var scale = [1, 1];
+
+  drawScene();
+
+  // Setup a ui.
+  webglLessonsUI.setupSlider("#x",      {value: translation[0], slide: updatePosition(0), max: gl.canvas.width });
+  webglLessonsUI.setupSlider("#y",      {value: translation[1], slide: updatePosition(1), max: gl.canvas.height});
+  webglLessonsUI.setupSlider("#angle",  {slide: updateAngle, max: 360});
+  webglLessonsUI.setupSlider("#scaleX", {value: scale[0], slide: updateScale(0), min: -5, max: 5, step: 0.01, precision: 2});
+  webglLessonsUI.setupSlider("#scaleY", {value: scale[1], slide: updateScale(1), min: -5, max: 5, step: 0.01, precision: 2});
+
+  function updatePosition(index) {
+    return function(event, ui) {
+      translation[index] = ui.value;
+      drawScene();
+    };
+  }
+
+  function updateAngle(event, ui) {
+    var angleInDegrees = 360 - ui.value;
+    angleInRadians = angleInDegrees * Math.PI / 180;
+    drawScene();
+  }
+
+  function updateScale(index) {
+    return function(event, ui) {
+      scale[index] = ui.value;
+      drawScene();
+    };
+  }
+
+  // Draw the scene.
+  function drawScene() {
+    webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+    // Clear the canvas
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Compute the matrix
+    var matrix = m3.projection(gl.canvas.clientWidth, gl.canvas.clientHeight);
+    // x,y,z축으로 얼마나 이동(translate할것인가)
+    // scale부터 순서대로 실행됨 1,2,3
+    matrix = m3.translate(matrix, translation[0], translation[1]);  // 3
+    matrix = m3.rotate(matrix, angleInRadians); // 2
+    matrix = m3.scale(matrix, scale[0], scale[1]);  // 1
+
+    // Tell it to use our program (pair of shaders)
+    gl.useProgram(program);
+
+    // Bind the attribute/buffer set we want.
+    gl.bindVertexArray(vao);
+
+    // Set the matrix.
+    gl.uniformMatrix3fv(matrixLocation, false, matrix);
+
+    // Draw the geometry.
+    var offset = 0;
+    var count = 3;
+    gl.drawArrays(gl.TRIANGLES, offset, count);
+  }
+}
+
+// Fill the buffer with the values that define a triangle.
+// 트라이앵글의 좌표 설정
+function setGeometry(gl) {
+  gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([
+             0, -100,
+           150,  125,
+          -175,  100,
+      ]),
+      gl.STATIC_DRAW);
+}
+
+main();
+</script>
+</html>
+
+
